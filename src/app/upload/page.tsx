@@ -135,15 +135,29 @@ export default function UploadPage() {
                   ))}
                 </div>
                 {result.column_sample?.length > 0 && (
-                  <div style={{ marginBottom: 12, padding: '8px 10px', background: '#1a2d44', borderRadius: 6 }}>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>COLUMNS DETECTED IN FILE</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      {result.column_sample.map((c: string) => (
-                        <span key={c} style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--amber)', background: '#f59e0b12', padding: '2px 6px', borderRadius: 3 }}>{c}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+  <div style={{ marginBottom: 12, padding: '8px 10px', background: '#1a2d44', borderRadius: 6 }}>
+    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>
+      COLUMNS DETECTED IN FILE
+    </div>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+      {result.column_sample.map((c: string) => (
+        <span
+          key={c}
+          style={{
+            fontFamily: 'monospace',
+            fontSize: 10,
+            color: 'var(--amber)',
+            background: '#f59e0b12',
+            padding: '2px 6px',
+            borderRadius: 3
+          }}
+        >
+          {c}
+        </span>
+      ))}
+    </div>
+  </div>
+)}
                 {result.parse_errors?.length > 0 && (
                   <div style={{ marginTop: 12 }}>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>PARSE ERRORS</div>
