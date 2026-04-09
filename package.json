@@ -1,0 +1,39 @@
+{
+  "name": "xindus-cost-engine",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "ts-node --project tsconfig.seed.json --require tsconfig-paths/register prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.11.0",
+    "@supabase/supabase-js": "^2.41.0",
+    "date-fns": "^3.6.0",
+    "next": "14.2.3",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "recharts": "^2.12.3",
+    "xlsx": "^0.18.5",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.0",
+    "prisma": "^5.11.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.4.5"
+  }
+}
