@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, type DragEvent } from 'react'
 import Link from 'next/link'
 
 const REQUIRED_COLS = [
@@ -52,11 +52,13 @@ export default function UploadPage() {
     setUploading(false)
   }
 
-  const onDrop = (e: React.DragEvent) => {
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setDrag(false)
-    const f = e.dataTransfer.files[0]
-    if (f) upload(f)
+    const droppedFile = e.dataTransfer.files[0]
+    if (droppedFile) {
+      upload(droppedFile)
+    }
   }
 
   return (
