@@ -34,7 +34,7 @@ const installedParsed = parse(installed);
 if (installedParsed[0] === 14 && compare(installedParsed, MIN_SAFE_VERSION) < 0) {
   console.error(
     `[check-next-version] Installed next@${installed} is below the minimum safe version 14.2.35. ` +
-      'Upgrade Next.js before deploying.',
+      'Deploy from a commit that includes "next": "14.2.35" (or newer) in package.json.',
   );
   process.exit(1);
 }
