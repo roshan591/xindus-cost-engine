@@ -55,19 +55,38 @@ export async function GET(req: NextRequest) {
   XLSX.utils.book_append_sheet(wb, ws1, 'Cost Breakdown')
 
   // Sheet 2: Weekly summary
-  type WS = Record<string,number> & { week: string; count: number; weight: number; total: number }
+  const nodes = ['pickup', 'fm', 'hub', 'oc', 'mm', 'dh', 'dc_clearance', 'dropoff', 'lm'] as const
+  type NodeKey = (typeof nodes)[number]
+  type WS = { week: string; count: number; weight: number; total: number } & Record<NodeKey, number>
   const wm = new Map<string, WS>()
-  const nodes = ['pickup','fm','hub','oc','mm','dh','dc_clearance','dropoff','lm']
+
+  const getNodeCost = (costs: NonNullable<(typeof shipments)[number]['costs']>, node: NodeKey) => {
+    switch (node) {
+      case 'pickup': return costs.pickup_cost
+      case 'fm': return costs.fm_cost
+      case 'hub': return costs.hub_cost
+      case 'oc': return costs.oc_cost
+      case 'mm': return costs.mm_cost
+      case 'dh': return costs.dh_cost
+      case 'dc_clearance': return costs.dc_clearance_cost
+      case 'dropoff': return costs.dropoff_cost
+      case 'lm': return costs.lm_cost
+    }
+  }
   for (const s of shipments) {
     const d = s.pickup_date
     const wk = Math.ceil(((d.getTime() - new Date(d.getFullYear(),0,1).getTime()) / 86400000 + 1) / 7)
     const lbl = `${d.getFullYear()}-W${String(wk).padStart(2,'0')}`
-    if (!wm.has(lbl)) wm.set(lbl, { week: lbl, count: 0, weight: 0, total: 0, ...Object.fromEntries(nodes.map(n=>[n,0])) } as WS)
+    if (!wm.has(lbl)) {
+      const nodeDefaults = Object.fromEntries(nodes.map((node) => [node, 0])) as Record<NodeKey, number>
+      wm.set(lbl, { week: lbl, count: 0, weight: 0, total: 0, ...nodeDefaults })
+    }
     const w = wm.get(lbl)!
     w.count++; w.weight += s.gross_weight
     if (s.costs) {
-      w.total += s.costs.total_cost
-      nodes.forEach(n => { w[n] += (s.costs as Record<string,number>)[`${n}_cost`] ?? 0 })
+      const costs = s.costs
+      w.total += costs.total_cost
+      nodes.forEach((node) => { w[node] += getNodeCost(costs, node) })
     }
   }
   const wrows = Array.from(wm.values()).sort((a,b)=>a.week.localeCompare(b.week)).map(w => ({
@@ -82,14 +101,14 @@ export async function GET(req: NextRequest) {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(wrows), 'Weekly Summary')
 
   // Sheet 3: Node distribution
-  const nodeLabels: [string,string][] = [
+  const nodeLabels: [NodeKey, string][] = [
     ['pickup','Pickup'],['fm','First Mile'],['hub','Hub'],['oc','Origin Customs'],
     ['mm','Middle Mile'],['dh','Dest. Handling'],['dc_clearance','Dest. Clearance'],
     ['dropoff','Drop-Off'],['lm','Last Mile'],
   ]
   const grand = shipments.reduce((a,s)=>a+(s.costs?.total_cost??0),0)
   const drows = nodeLabels.map(([k,l])=>{
-    const c = shipments.reduce((a,s)=>a+((s.costs as Record<string,number>)?.[`${k}_cost`]??0),0)
+    const c = shipments.reduce((a, s) => a + (s.costs ? getNodeCost(s.costs, k) : 0), 0)
     return { 'Node': l, 'Total ₹': +c.toFixed(2), '% of Total': grand ? +(c/grand*100).toFixed(1) : 0 }
   })
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(drows), 'Node Distribution')

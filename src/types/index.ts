@@ -17,6 +17,7 @@ export interface ShipmentInput {
   service_type?: string      // Commercial | Courier
   point_of_entry?: string    // JFK | LAX
   injection_port?: string    // JFK-Shipbae-WC
+  dc_partner?: string
   country?: string
   pkg_type: 'box' | 'flyer'
   n_packages: number
