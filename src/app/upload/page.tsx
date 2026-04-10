@@ -53,7 +53,8 @@ export default function UploadPage() {
   }
 
   const onDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setDrag(false)
+    e.preventDefault()
+    setDrag(false)
     const f = e.dataTransfer.files[0]
     if (f) upload(f)
   }
