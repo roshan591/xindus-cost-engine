@@ -1,11 +1,10 @@
 {
   "installCommand": "npm install",
-  "buildCommand": "npm run build",
+  "buildCommand": "npx prisma generate && next build",
   "crons": [
     {
       "path": "/api/cron/recompute",
       "schedule": "0 2 * * 1"
     }
-  ],
-  "framework": "nextjs"
+  ]
 }
