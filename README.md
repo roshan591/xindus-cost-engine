@@ -118,6 +118,8 @@ vercel
 
 Vercel Cron is pre-configured in `vercel.json` to recompute all shipment costs every **Monday at 02:00 UTC**.
 
+> **Build troubleshooting:** If Vercel logs show `sh: line 1: Install: command not found`, open **Project Settings → Build & Development Settings → Install Command** and set it to exactly `npm install` (or leave it blank). Do **not** paste labels like `Install Command: npm install`.
+
 ---
 
 ## Upload Template
