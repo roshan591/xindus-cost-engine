@@ -10,10 +10,25 @@ export async function GET(req: NextRequest) {
   if (!shipments.length) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   const totalWeight = shipments.reduce((a, s) => a + s.gross_weight, 0)
   const totalCost   = shipments.reduce((a, s) => a + (s.costs?.total_cost ?? 0), 0)
-  const nodes = ['pickup','fm','hub','oc','mm','dh','dc_clearance','dropoff','lm'] as const
-  const nodeTotals = Object.fromEntries(nodes.map(n =>
-    [n, shipments.reduce((a, s) => a + ((s.costs as Record<string,number>)?.[`${n}_cost`] ?? 0), 0)]
-  ))
+  const nodes = ['pickup', 'fm', 'hub', 'oc', 'mm', 'dh', 'dc_clearance', 'dropoff', 'lm'] as const
+  type NodeKey = (typeof nodes)[number]
+  const getNodeCost = (costs: NonNullable<(typeof shipments)[number]['costs']>, node: NodeKey) => {
+    switch (node) {
+      case 'pickup': return costs.pickup_cost
+      case 'fm': return costs.fm_cost
+      case 'hub': return costs.hub_cost
+      case 'oc': return costs.oc_cost
+      case 'mm': return costs.mm_cost
+      case 'dh': return costs.dh_cost
+      case 'dc_clearance': return costs.dc_clearance_cost
+      case 'dropoff': return costs.dropoff_cost
+      case 'lm': return costs.lm_cost
+    }
+  }
+  const nodeTotals = Object.fromEntries(nodes.map((node) => [
+    node,
+    shipments.reduce((a, s) => a + (s.costs ? getNodeCost(s.costs, node) : 0), 0),
+  ]))
   return NextResponse.json({
     manifest_id: manifestId, mawb: mawb ?? shipments[0].mawb,
     flight_no: manifestId ? shipments[0].pc_to_hub_flight_no : undefined,

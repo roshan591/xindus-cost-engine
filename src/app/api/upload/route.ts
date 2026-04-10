@@ -76,7 +76,6 @@ const COL_MAP: Record<string, keyof ShipmentInput> = {
   'carrier': 'lm_carrier', 'service': 'lm_carrier',
   'lmshippingmethod': 'lm_shipping_method', 'lm_shipping_method': 'lm_shipping_method',
   'shipping method': 'lm_shipping_method', 'shippingmethod': 'lm_shipping_method',
-  'lm_shipping_method': 'lm_shipping_method',
 
   // ZIP (delivery)
   'dest zip': 'dest_zip', 'dest_zip': 'dest_zip',

@@ -20,9 +20,10 @@ export async function GET(req: NextRequest) {
   const count       = shipments.length
 
   // Weekly rollup
-  type Bucket = Record<string, number> & { week: string; count: number; weight: number; total: number }
+  const nodes = ['pickup', 'fm', 'hub', 'oc', 'mm', 'dh', 'dc_clearance', 'dropoff', 'lm'] as const
+  type NodeKey = (typeof nodes)[number]
+  type Bucket = { week: string; count: number; weight: number; total: number } & Record<NodeKey, number>
   const weekMap = new Map<string, Bucket>()
-  const nodes = ['pickup','fm','hub','oc','mm','dh','dc_clearance','dropoff','lm']
 
   for (const s of shipments) {
     const d = s.pickup_date
@@ -31,8 +32,8 @@ export async function GET(req: NextRequest) {
     const label = `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`
 
     if (!weekMap.has(label)) {
-      const b: Bucket = { week: label, count: 0, weight: 0, total: 0 }
-      for (const n of nodes) b[n] = 0
+      const nodeDefaults = Object.fromEntries(nodes.map((node) => [node, 0])) as Record<NodeKey, number>
+      const b: Bucket = { week: label, count: 0, weight: 0, total: 0, ...nodeDefaults }
       weekMap.set(label, b)
     }
     const b = weekMap.get(label)!
