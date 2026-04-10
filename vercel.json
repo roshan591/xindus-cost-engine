@@ -6,5 +6,6 @@
       "path": "/api/cron/recompute",
       "schedule": "0 2 * * 1"
     }
-  ]
+  ],
+  "framework": "nextjs"
 }
