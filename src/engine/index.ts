@@ -196,11 +196,22 @@ export async function persistCosts(results: ShipmentCostResult[]): Promise<void>
 
 // ─── BACKWARD-COMPAT EXPORT ALIASES ─────────────────────────────────────────
 // Some call sites still import the previous names from `@/engine`.
-// Keep these aliases to avoid breaking older modules while the codebase
+// Keep these wrappers to avoid breaking older modules while the codebase
 // migrates to the newer `loadEngineContext` / `runCostEngine` / `persistCosts`
 // naming.
-export const loadMasters = loadEngineContext
-export const runEngine = runCostEngine
-export const persistResults = persistCosts
+export async function loadMasters(awbs?: string[]) {
+  return loadEngineContext(awbs)
+}
+
+export async function runEngine(
+  shipments: ShipmentInput[],
+  ctx?: EngineContext
+) {
+  return runCostEngine(shipments, ctx)
+}
+
+export async function persistResults(results: ShipmentCostResult[]) {
+  return persistCosts(results)
+}
 
 
