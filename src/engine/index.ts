@@ -8,7 +8,15 @@ import { computeMmCosts, computeDhCosts, computeDcClearanceCosts, computeDropoff
 import { computeLmCosts } from './lastMile'
 import { round2, extractPartner } from '@/lib/utils'
 
-const prisma = new PrismaClient()
+// ✅ Prisma Singleton (important for Vercel / Next.js)
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
+
+export const prisma =
+  globalForPrisma.prisma || new PrismaClient()
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma
+}
 
 // ─── MASTER DATA LOADER ───────────────────────────────────────────────────────
 
@@ -52,10 +60,17 @@ export async function loadEngineContext(awbs?: string[]): Promise<EngineContext>
     }),
   ])
 
-  // Build override map: awb → node → {flag, cost}
-  const overrides = new Map<string, Map<string, { override_flag: boolean; override_cost: number | null }>>()
+  // Build override map
+  const overrides = new Map<
+    string,
+    Map<string, { override_flag: boolean; override_cost: number | null }>
+  >()
+
   for (const ov of overrideRows) {
-    if (!overrides.has(ov.awb)) overrides.set(ov.awb, new Map())
+    if (!overrides.has(ov.awb)) {
+      overrides.set(ov.awb, new Map())
+    }
+
     overrides.get(ov.awb)!.set(ov.node, {
       override_flag: ov.override_flag,
       override_cost: ov.override_cost,
@@ -78,7 +93,11 @@ export async function loadEngineContext(awbs?: string[]): Promise<EngineContext>
     dcClearanceAvg,
     dropoffMasters,
     dropoffAvg,
-    lmCarrierConfigs: lmCarrierConfigs.map(c => ({ ...c, carrier_type: c.carrier_type as any, rate_type: c.rate_type as any })),
+    lmCarrierConfigs: lmCarrierConfigs.map(c => ({
+      ...c,
+      carrier_type: c.carrier_type as any,
+      rate_type: c.rate_type as any,
+    })),
     lmZoneMapping,
     lmRateCards: lmRateCards.map(r => ({ ...r, unit: r.unit as any })),
     lmDas,
@@ -94,47 +113,54 @@ export async function runCostEngine(
   shipments: ShipmentInput[],
   ctx?: EngineContext
 ): Promise<ShipmentCostResult[]> {
-  // Enrich dc_partner from injection_port if not provided
-  const enriched = shipments.map(s => ({
-    ...s,
-    dc_partner: s.dc_partner ?? extractPartner(s.injection_port),
-  }))
+  try {
+    const enriched = shipments.map(s => ({
+      ...s,
+      dc_partner: s.dc_partner ?? extractPartner(s.injection_port),
+    }))
 
-  const context = ctx ?? await loadEngineContext(enriched.map(s => s.awb))
+    const context = ctx ?? await loadEngineContext(enriched.map(s => s.awb))
 
-  // Run all 9 nodes in parallel (they're independent reads; grouping is done internally)
-  const [
-    pickupMap, fmMap, hubMap, ocMap, mmMap, dhMap, dcMap, dropoffMap, lmMap
-  ] = await Promise.all([
-    Promise.resolve(computePickupCosts(enriched, context)),
-    Promise.resolve(computeFmCosts(enriched, context)),
-    Promise.resolve(computeHubCosts(enriched, context)),
-    Promise.resolve(computeOcCosts(enriched, context)),
-    Promise.resolve(computeMmCosts(enriched, context)),
-    Promise.resolve(computeDhCosts(enriched, context)),
-    Promise.resolve(computeDcClearanceCosts(enriched, context)),
-    Promise.resolve(computeDropoffCosts(enriched, context)),
-    Promise.resolve(computeLmCosts(enriched, context)),
-  ])
+    const [
+      pickupMap, fmMap, hubMap, ocMap, mmMap, dhMap, dcMap, dropoffMap, lmMap
+    ] = await Promise.all([
+      computePickupCosts(enriched, context),
+      computeFmCosts(enriched, context),
+      computeHubCosts(enriched, context),
+      computeOcCosts(enriched, context),
+      computeMmCosts(enriched, context),
+      computeDhCosts(enriched, context),
+      computeDcClearanceCosts(enriched, context),
+      computeDropoffCosts(enriched, context),
+      computeLmCosts(enriched, context),
+    ])
 
-  return enriched.map(s => {
-    const pickup = pickupMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
-    const fm = fmMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
-    const hub = hubMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
-    const oc = ocMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
-    const mm = mmMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
-    const dh = dhMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
-    const dc_clearance = dcMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
-    const dropoff = dropoffMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
-    const lm = lmMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
+    return enriched.map(s => {
+      const pickup = pickupMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
+      const fm = fmMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
+      const hub = hubMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
+      const oc = ocMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
+      const mm = mmMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
+      const dh = dhMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
+      const dc_clearance = dcMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
+      const dropoff = dropoffMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
+      const lm = lmMap.get(s.awb) ?? { cost: 0, source: 'missing' as const }
 
-    const total = round2(
-      pickup.cost + fm.cost + hub.cost + oc.cost + mm.cost +
-      dh.cost + dc_clearance.cost + dropoff.cost + lm.cost
-    )
+      const total = round2(
+        pickup.cost + fm.cost + hub.cost + oc.cost + mm.cost +
+        dh.cost + dc_clearance.cost + dropoff.cost + lm.cost
+      )
 
-    return { awb: s.awb, pickup, fm, hub, oc, mm, dh, dc_clearance, dropoff, lm, total }
-  })
+      return {
+        awb: s.awb,
+        pickup, fm, hub, oc, mm, dh, dc_clearance, dropoff, lm, total
+      }
+    })
+
+  } catch (err) {
+    console.error('Cost engine failed:', err)
+    throw err
+  }
 }
 
 // ─── PERSIST COMPUTED COSTS ───────────────────────────────────────────────────
@@ -194,24 +220,8 @@ export async function persistCosts(results: ShipmentCostResult[]): Promise<void>
   )
 }
 
-// ─── BACKWARD-COMPAT EXPORT ALIASES ─────────────────────────────────────────
-// Some call sites still import the previous names from `@/engine`.
-// Keep these wrappers to avoid breaking older modules while the codebase
-// migrates to the newer `loadEngineContext` / `runCostEngine` / `persistCosts`
-// naming.
-export async function loadMasters(awbs?: string[]) {
-  return loadEngineContext(awbs)
-}
+// ─── BACKWARD-COMPAT EXPORTS (CLEAN VERSION) ──────────────────────────────────
 
-export async function runEngine(
-  shipments: ShipmentInput[],
-  ctx?: EngineContext
-) {
-  return runCostEngine(shipments, ctx)
-}
-
-export async function persistResults(results: ShipmentCostResult[]) {
-  return persistCosts(results)
-}
-
-
+export const loadMasters = loadEngineContext
+export const runEngine = runCostEngine
+export const persistResults = persistCosts
