@@ -222,3 +222,5 @@ curl -X PATCH /api/shipments/XD-2503-001/override \
 **Drop-Off:** `dropoff_master`, `dropoff_avg_master`
 
 **Last Mile:** `lm_carrier_config`, `lm_zone_mapping`, `lm_rate_card`, `lm_das_master`, `lm_surcharge_master`, `lm_avg_master`
+
+
