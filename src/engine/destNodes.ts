@@ -130,7 +130,7 @@ export function computeDhCosts(
           continue
         }
         const avg = ctx.dhAvg.find(
-          a => a.clearance_type === g.clearanceType && a.point_of_entry === g.pointOfEntry
+          a => a.clearance_type === g.clearanceType && a.point_of_entry === g.pointOfEntry && isDateInRange(g.refDate, a.start_date, a.end_date)
         )
         result.set(s.awb, avg
           ? { cost: round2(avg.avg_cost_per_kg * s.gross_weight), source: 'avg' }
@@ -385,7 +385,7 @@ export function computeDropoffCosts(
           continue
         }
         const avg = ctx.dropoffAvg.find(
-          a => a.country === g.country && a.partner === g.partner
+          a => a.country === g.country && a.partner === g.partner && isDateInRange(g.refDate, a.start_date, a.end_date)
         )
         result.set(s.awb, avg
           ? { cost: round2(avg.avg_cost_per_kg * s.gross_weight), source: 'avg' }

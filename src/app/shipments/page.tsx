@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Fragment } from 'react'
 import Link from 'next/link'
 
 const NODES = ['pickup', 'fm', 'hub', 'oc', 'mm', 'dh', 'dc_clearance', 'dropoff', 'lm'] as const
@@ -19,6 +19,7 @@ export default function ShipmentsPage() {
   const [shipments, setShipments] = useState<any[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [overrideModal, setOverrideModal] = useState<{ awb: string; node: string } | null>(null)
   const [overrideForm, setOverrideForm] = useState({ cost: '', reason: '', updatedBy: '' })
@@ -26,16 +27,33 @@ export default function ShipmentsPage() {
   const [toast, setToast] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    setLoading(true)
-    const params = new URLSearchParams()
-    if (filters.week) params.set('week', filters.week)
-    if (filters.hub) params.set('hub', filters.hub)
-    params.set('limit', '200')
-    const r = await fetch('/api/shipments?' + params)
-    const j = await r.json()
-    setShipments(j.shipments ?? [])
-    setTotal(j.total ?? 0)
-    setLoading(false)
+    try {
+      setLoading(true)
+      setError(null)
+      const params = new URLSearchParams()
+      if (filters.week) params.set('week', filters.week)
+      if (filters.hub) params.set('hub', filters.hub)
+      params.set('limit', '200')
+
+      const r = await fetch('/api/shipments?' + params)
+      const contentType = r.headers.get('content-type') ?? ''
+      const data = contentType.includes('application/json')
+        ? await r.json()
+        : { error: await r.text() }
+
+      if (!r.ok) {
+        throw new Error(data.details || data.error || 'Failed to load shipments')
+      }
+
+      setShipments(data.shipments ?? [])
+      setTotal(data.total ?? 0)
+    } catch (err) {
+      setShipments([])
+      setTotal(0)
+      setError(err instanceof Error ? err.message : 'Failed to load shipments')
+    } finally {
+      setLoading(false)
+    }
   }, [filters])
 
   useEffect(() => { load() }, [load])
@@ -131,14 +149,16 @@ export default function ShipmentsPage() {
               <tbody>
                 {loading ? (
                   <tr><td colSpan={16} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Loading…</td></tr>
+                ) : error ? (
+                  <tr><td colSpan={16} style={{ textAlign: 'center', padding: 40, color: '#fca5a5' }}>{error}</td></tr>
                 ) : shipments.length === 0 ? (
                   <tr><td colSpan={16} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>No shipments found. Upload a file to get started.</td></tr>
                 ) : shipments.map(s => {
                   const c = s.costs
                   const isExp = expanded === s.awb
                   return (
-                    <>
-                      <tr key={s.awb} onClick={() => setExpanded(isExp ? null : s.awb)}>
+                    <Fragment key={s.awb}>
+                      <tr onClick={() => setExpanded(isExp ? null : s.awb)}>
                         <td className="expand">{isExp ? '▼' : '▶'}</td>
                         <td className="h">
                           <Link href={`/shipments/${encodeURIComponent(s.awb)}`}
@@ -163,7 +183,7 @@ export default function ShipmentsPage() {
                         <td className="ra">{c ? fmt(c.total_cost) : '—'}</td>
                       </tr>
                       {isExp && (
-                        <tr key={s.awb + '_exp'}>
+                        <tr>
                           <td colSpan={16} className="expand-panel">
                             {/* Details grid */}
                             <div className="detail-grid" style={{ marginBottom: 12 }}>
@@ -233,7 +253,7 @@ export default function ShipmentsPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   )
                 })}
               </tbody>

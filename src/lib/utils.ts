@@ -32,9 +32,11 @@ export function weeksInMonth(date: Date | string): number {
 
 // Get all calendar dates within a ISO-week label
 export function datesInWeek(weekLabel: string): Date[] {
-  const [yearStr, weekStr] = weekLabel.split('-W')
-  const year = parseInt(yearStr)
-  const week = parseInt(weekStr)
+  const parts = weekLabel.split('-W')
+  if (parts.length !== 2) return []
+  const year = parseInt(parts[0])
+  const week = parseInt(parts[1])
+  if (isNaN(year) || isNaN(week)) return []
   const startOfYear = new Date(year, 0, 1)
   const dayOffset = (week - 1) * 7
   const dates: Date[] = []
