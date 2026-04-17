@@ -43,6 +43,7 @@ jobs:
       - name: Trigger Render deploy
         run: |
           curl --fail --silent --show-error -X POST \
-            "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
-        # RENDER_DEPLOY_HOOK_URL → GitHub repo → Settings → Secrets → Actions
-        # Get the URL from: Render dashboard → your service → Settings → Deploy Hook
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache":"do_not_clear"}' \
+            "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys"
