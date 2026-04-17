@@ -7,22 +7,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio",
-    "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
-    "prebuild": "node scripts/check-next-version.js || true",
-    "postinstall": "prisma generate"
-  },
-  "prisma": {
-    "seed": "ts-node --project tsconfig.seed.json --require tsconfig-paths/register prisma/seed.ts"
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
-    "@prisma/client": "^5.11.0",
     "@supabase/supabase-js": "^2.41.0",
     "date-fns": "^3.6.0",
+    "drizzle-orm": "^0.45.2",
     "next": "14.2.35",
+    "postgres": "^3.4.9",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "recharts": "^2.12.3",
@@ -33,9 +27,9 @@
     "@types/node": "^20.12.7",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.0",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.35",
-    "prisma": "^5.11.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.4.5"

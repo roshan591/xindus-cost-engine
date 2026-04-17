@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { eq, asc, desc } from 'drizzle-orm'
+import { db } from '@/db'
+import {
+  pickupCostMasters, pickupAvgMasters,
+  fmMasters, fmAvgMasters,
+  hubCostMasters, holidays,
+  ocMasters, ocAvgMasters,
+  mmMasters, mmAvgMasters,
+  dhMasters, dhAvgMasters,
+  dcClearanceMasters, dcClearanceAvgMasters,
+  dropoffMasters, dropoffAvgMasters,
+  lmCarrierConfigs, lmZoneMappings, lmRateCards,
+  lmDasMasters, lmSurchargeMasters, lmAvgMasters,
+} from '@/db/schema'
 
 const d = (s: string) => new Date(s)
 function err(e: unknown) { return NextResponse.json({ error: String(e) }, { status: 500 }) }
@@ -7,224 +20,301 @@ function err(e: unknown) { return NextResponse.json({ error: String(e) }, { stat
 // ── 5.1 PICKUP ────────────────────────────────────────────────────────────────
 export async function GET_pickup() {
   const [masters, avg] = await Promise.all([
-    prisma.pickupCostMaster.findMany({ orderBy: [{ pickup_node: 'asc' }, { start_date: 'desc' }] }),
-    prisma.pickupAvgMaster.findMany({ orderBy: { start_date: 'desc' } }),
+    db.select().from(pickupCostMasters).orderBy(asc(pickupCostMasters.pickup_node), desc(pickupCostMasters.start_date)),
+    db.select().from(pickupAvgMasters).orderBy(desc(pickupAvgMasters.start_date)),
   ])
   return NextResponse.json({ masters, avg })
 }
 export async function POST_pickup(req: NextRequest) {
   try {
     const { type, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.pickupAvgMaster.create({ data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
-    return NextResponse.json(await prisma.pickupCostMaster.create({ data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.insert(pickupAvgMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.insert(pickupCostMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function PUT_pickup(req: NextRequest) {
   try {
     const { type, id, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.pickupAvgMaster.update({ where: { id }, data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
-    return NextResponse.json(await prisma.pickupCostMaster.update({ where: { id }, data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.update(pickupAvgMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(pickupAvgMasters.id, id)).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.update(pickupCostMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(pickupCostMasters.id, id)).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function DELETE_pickup(req: NextRequest) {
   const { id } = await req.json()
-  await prisma.pickupCostMaster.delete({ where: { id } })
+  await db.delete(pickupCostMasters).where(eq(pickupCostMasters.id, id))
   return NextResponse.json({ success: true })
 }
 
 // ── 5.2 FIRST MILE ───────────────────────────────────────────────────────────
 export async function GET_fm() {
   const [masters, avg] = await Promise.all([
-    prisma.fmMaster.findMany({ orderBy: [{ origin_node: 'asc' }, { start_date: 'desc' }] }),
-    prisma.fmAvgMaster.findMany({ orderBy: { start_date: 'desc' } }),
+    db.select().from(fmMasters).orderBy(asc(fmMasters.origin_node), desc(fmMasters.start_date)),
+    db.select().from(fmAvgMasters).orderBy(desc(fmAvgMasters.start_date)),
   ])
   return NextResponse.json({ masters, avg })
 }
 export async function POST_fm(req: NextRequest) {
   try {
     const { type, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.fmAvgMaster.create({ data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
-    return NextResponse.json(await prisma.fmMaster.create({ data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.insert(fmAvgMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.insert(fmMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function PUT_fm(req: NextRequest) {
   try {
     const { type, id, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.fmAvgMaster.update({ where: { id }, data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
-    return NextResponse.json(await prisma.fmMaster.update({ where: { id }, data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.update(fmAvgMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(fmAvgMasters.id, id)).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.update(fmMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(fmMasters.id, id)).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function DELETE_fm(req: NextRequest) {
-  const { id } = await req.json(); await prisma.fmMaster.delete({ where: { id } }); return NextResponse.json({ success: true })
+  const { id } = await req.json()
+  await db.delete(fmMasters).where(eq(fmMasters.id, id))
+  return NextResponse.json({ success: true })
 }
 
 // ── 5.3 HUB ──────────────────────────────────────────────────────────────────
 export async function GET_hub() {
-  const [masters, holidays] = await Promise.all([
-    prisma.hubCostMaster.findMany({ orderBy: [{ hub_name: 'asc' }, { start_date: 'desc' }] }),
-    prisma.holiday.findMany({ orderBy: { date: 'desc' } }),
+  const [masters, holidayRows] = await Promise.all([
+    db.select().from(hubCostMasters).orderBy(asc(hubCostMasters.hub_name), desc(hubCostMasters.start_date)),
+    db.select().from(holidays).orderBy(desc(holidays.date)),
   ])
-  return NextResponse.json({ masters, holidays })
+  return NextResponse.json({ masters, holidays: holidayRows })
 }
 export async function POST_hub(req: NextRequest) {
   try {
     const { type, data } = await req.json()
-    if (type === 'holiday') return NextResponse.json(await prisma.holiday.create({ data: { ...data, date: d(data.date) } }))
-    return NextResponse.json(await prisma.hubCostMaster.create({ data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'holiday') {
+      const [row] = await db.insert(holidays).values({ ...data, date: d(data.date) }).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.insert(hubCostMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function PUT_hub(req: NextRequest) {
   try {
     const { type, id, data } = await req.json()
-    if (type === 'holiday') return NextResponse.json(await prisma.holiday.update({ where: { id }, data: { ...data, date: d(data.date) } }))
-    return NextResponse.json(await prisma.hubCostMaster.update({ where: { id }, data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'holiday') {
+      const [row] = await db.update(holidays).set({ ...data, date: d(data.date) }).where(eq(holidays.id, id)).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.update(hubCostMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(hubCostMasters.id, id)).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function DELETE_hub(req: NextRequest) {
   const { type, id } = await req.json()
-  if (type === 'holiday') { await prisma.holiday.delete({ where: { id } }); return NextResponse.json({ success: true }) }
-  await prisma.hubCostMaster.delete({ where: { id } }); return NextResponse.json({ success: true })
+  if (type === 'holiday') { await db.delete(holidays).where(eq(holidays.id, id)); return NextResponse.json({ success: true }) }
+  await db.delete(hubCostMasters).where(eq(hubCostMasters.id, id))
+  return NextResponse.json({ success: true })
 }
 
 // ── 5.4 OC ───────────────────────────────────────────────────────────────────
 export async function GET_oc() {
   const [masters, avg] = await Promise.all([
-    prisma.ocMaster.findMany({ orderBy: [{ vendor_name: 'asc' }, { charge_type: 'asc' }] }),
-    prisma.ocAvgMaster.findMany(),
+    db.select().from(ocMasters).orderBy(asc(ocMasters.vendor_name), asc(ocMasters.charge_type)),
+    db.select().from(ocAvgMasters),
   ])
   return NextResponse.json({ masters, avg })
 }
 export async function POST_oc(req: NextRequest) {
   try {
     const { type, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.ocAvgMaster.create({ data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
-    return NextResponse.json(await prisma.ocMaster.create({ data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.insert(ocAvgMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.insert(ocMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function PUT_oc(req: NextRequest) {
   try {
     const { type, id, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.ocAvgMaster.update({ where: { id }, data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
-    return NextResponse.json(await prisma.ocMaster.update({ where: { id }, data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.update(ocAvgMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(ocAvgMasters.id, id)).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.update(ocMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(ocMasters.id, id)).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function DELETE_oc(req: NextRequest) {
-  const { id } = await req.json(); await prisma.ocMaster.delete({ where: { id } }); return NextResponse.json({ success: true })
+  const { id } = await req.json()
+  await db.delete(ocMasters).where(eq(ocMasters.id, id))
+  return NextResponse.json({ success: true })
 }
 
 // ── 5.5 MM ───────────────────────────────────────────────────────────────────
 export async function GET_mm() {
   const [masters, avg] = await Promise.all([
-    prisma.mmMaster.findMany({ orderBy: [{ origin_port: 'asc' }, { start_date: 'desc' }] }),
-    prisma.mmAvgMaster.findMany({ orderBy: { start_date: 'desc' } }),
+    db.select().from(mmMasters).orderBy(asc(mmMasters.origin_port), desc(mmMasters.start_date)),
+    db.select().from(mmAvgMasters).orderBy(desc(mmAvgMasters.start_date)),
   ])
   return NextResponse.json({ masters, avg })
 }
 export async function POST_mm(req: NextRequest) {
   try {
     const { type, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.mmAvgMaster.create({ data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
-    return NextResponse.json(await prisma.mmMaster.create({ data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.insert(mmAvgMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.insert(mmMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function PUT_mm(req: NextRequest) {
   try {
     const { type, id, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.mmAvgMaster.update({ where: { id }, data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
-    return NextResponse.json(await prisma.mmMaster.update({ where: { id }, data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.update(mmAvgMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(mmAvgMasters.id, id)).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.update(mmMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(mmMasters.id, id)).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function DELETE_mm(req: NextRequest) {
-  const { id } = await req.json(); await prisma.mmMaster.delete({ where: { id } }); return NextResponse.json({ success: true })
+  const { id } = await req.json()
+  await db.delete(mmMasters).where(eq(mmMasters.id, id))
+  return NextResponse.json({ success: true })
 }
 
 // ── 5.6 DH ───────────────────────────────────────────────────────────────────
 export async function GET_dh() {
   const [masters, avg] = await Promise.all([
-    prisma.dhMaster.findMany({ orderBy: [{ dc_partner: 'asc' }, { cost_head_name: 'asc' }] }),
-    prisma.dhAvgMaster.findMany(),
+    db.select().from(dhMasters).orderBy(asc(dhMasters.dc_partner), asc(dhMasters.cost_head_name)),
+    db.select().from(dhAvgMasters),
   ])
   return NextResponse.json({ masters, avg })
 }
 export async function POST_dh(req: NextRequest) {
   try {
     const { type, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.dhAvgMaster.create({ data }))
-    return NextResponse.json(await prisma.dhMaster.create({ data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.insert(dhAvgMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.insert(dhMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function PUT_dh(req: NextRequest) {
   try {
     const { type, id, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.dhAvgMaster.update({ where: { id }, data }))
-    return NextResponse.json(await prisma.dhMaster.update({ where: { id }, data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.update(dhAvgMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(dhAvgMasters.id, id)).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.update(dhMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(dhMasters.id, id)).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function DELETE_dh(req: NextRequest) {
-  const { id } = await req.json(); await prisma.dhMaster.delete({ where: { id } }); return NextResponse.json({ success: true })
+  const { id } = await req.json()
+  await db.delete(dhMasters).where(eq(dhMasters.id, id))
+  return NextResponse.json({ success: true })
 }
 
 // ── 5.7 DC ───────────────────────────────────────────────────────────────────
 export async function GET_dc() {
   const [masters, avg] = await Promise.all([
-    prisma.dcClearanceMaster.findMany({ orderBy: [{ country: 'asc' }, { charge_type: 'asc' }] }),
-    prisma.dcClearanceAvgMaster.findMany(),
+    db.select().from(dcClearanceMasters).orderBy(asc(dcClearanceMasters.country), asc(dcClearanceMasters.charge_type)),
+    db.select().from(dcClearanceAvgMasters),
   ])
   return NextResponse.json({ masters, avg })
 }
 export async function POST_dc(req: NextRequest) {
   try {
     const { type, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.dcClearanceAvgMaster.create({ data }))
-    return NextResponse.json(await prisma.dcClearanceMaster.create({ data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.insert(dcClearanceAvgMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.insert(dcClearanceMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function PUT_dc(req: NextRequest) {
   try {
     const { type, id, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.dcClearanceAvgMaster.update({ where: { id }, data }))
-    return NextResponse.json(await prisma.dcClearanceMaster.update({ where: { id }, data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.update(dcClearanceAvgMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(dcClearanceAvgMasters.id, id)).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.update(dcClearanceMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(dcClearanceMasters.id, id)).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function DELETE_dc(req: NextRequest) {
-  const { id } = await req.json(); await prisma.dcClearanceMaster.delete({ where: { id } }); return NextResponse.json({ success: true })
+  const { id } = await req.json()
+  await db.delete(dcClearanceMasters).where(eq(dcClearanceMasters.id, id))
+  return NextResponse.json({ success: true })
 }
 
-// ── 5.8 DROPOFF ───────────────────────────────────────────────────────────────
+// ── 5.8 DROPOFF ──────────────────────────────────────────────────────────────
 export async function GET_dropoff() {
   const [masters, avg] = await Promise.all([
-    prisma.dropoffMaster.findMany({ orderBy: [{ country: 'asc' }, { partner: 'asc' }] }),
-    prisma.dropoffAvgMaster.findMany(),
+    db.select().from(dropoffMasters).orderBy(asc(dropoffMasters.country), asc(dropoffMasters.partner)),
+    db.select().from(dropoffAvgMasters),
   ])
   return NextResponse.json({ masters, avg })
 }
 export async function POST_dropoff(req: NextRequest) {
   try {
     const { type, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.dropoffAvgMaster.create({ data }))
-    return NextResponse.json(await prisma.dropoffMaster.create({ data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.insert(dropoffAvgMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.insert(dropoffMasters).values({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function PUT_dropoff(req: NextRequest) {
   try {
     const { type, id, data } = await req.json()
-    if (type === 'avg') return NextResponse.json(await prisma.dropoffAvgMaster.update({ where: { id }, data }))
-    return NextResponse.json(await prisma.dropoffMaster.update({ where: { id }, data: { ...data, start_date: d(data.start_date), end_date: d(data.end_date) } }))
+    if (type === 'avg') {
+      const [row] = await db.update(dropoffAvgMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(dropoffAvgMasters.id, id)).returning()
+      return NextResponse.json(row)
+    }
+    const [row] = await db.update(dropoffMasters).set({ ...data, start_date: d(data.start_date), end_date: d(data.end_date) }).where(eq(dropoffMasters.id, id)).returning()
+    return NextResponse.json(row)
   } catch (e) { return err(e) }
 }
 export async function DELETE_dropoff(req: NextRequest) {
-  const { id } = await req.json(); await prisma.dropoffMaster.delete({ where: { id } }); return NextResponse.json({ success: true })
+  const { id } = await req.json()
+  await db.delete(dropoffMasters).where(eq(dropoffMasters.id, id))
+  return NextResponse.json({ success: true })
 }
 
 // ── 5.9 LM ───────────────────────────────────────────────────────────────────
 export async function GET_lm() {
   const [configs, zones, rates, das, surcharges, avg] = await Promise.all([
-    prisma.lmCarrierConfig.findMany({ orderBy: [{ carrier_name: 'asc' }] }),
-    prisma.lmZoneMapping.findMany({ orderBy: [{ carrier_name: 'asc' }, { destination_key: 'asc' }] }),
-    prisma.lmRateCard.findMany({ orderBy: [{ carrier_name: 'asc' }, { zone: 'asc' }, { unit_value: 'asc' }] }),
-    prisma.lmDasMaster.findMany({ orderBy: [{ carrier_name: 'asc' }, { zipcode: 'asc' }] }),
-    prisma.lmSurchargeMaster.findMany({ orderBy: [{ carrier_name: 'asc' }] }),
-    prisma.lmAvgMaster.findMany(),
+    db.select().from(lmCarrierConfigs).orderBy(asc(lmCarrierConfigs.carrier_name)),
+    db.select().from(lmZoneMappings).orderBy(asc(lmZoneMappings.carrier_name), asc(lmZoneMappings.destination_key)),
+    db.select().from(lmRateCards).orderBy(asc(lmRateCards.carrier_name), asc(lmRateCards.zone), asc(lmRateCards.unit_value)),
+    db.select().from(lmDasMasters).orderBy(asc(lmDasMasters.carrier_name), asc(lmDasMasters.zipcode)),
+    db.select().from(lmSurchargeMasters).orderBy(asc(lmSurchargeMasters.carrier_name)),
+    db.select().from(lmAvgMasters),
   ])
   return NextResponse.json({ configs, zones, rates, das, surcharges, avg })
 }
@@ -233,19 +323,44 @@ export async function POST_lm(req: NextRequest) {
     const { type, data } = await req.json()
     const df = (s: string) => new Date(s)
     switch (type) {
-      case 'config': return NextResponse.json(await prisma.lmCarrierConfig.create({ data: { ...data, start_date: df(data.start_date), end_date: df(data.end_date) } }))
+      case 'config': {
+        const [row] = await db.insert(lmCarrierConfigs).values({ ...data, start_date: df(data.start_date), end_date: df(data.end_date) }).returning()
+        return NextResponse.json(row)
+      }
       case 'zone':
-        if (Array.isArray(data)) { await prisma.lmZoneMapping.createMany({ data: data.map((r: any) => ({ ...r, start_date: df(r.start_date), end_date: df(r.end_date) })), skipDuplicates: true }); return NextResponse.json({ created: data.length }) }
-        return NextResponse.json(await prisma.lmZoneMapping.create({ data: { ...data, start_date: df(data.start_date), end_date: df(data.end_date) } }))
+        if (Array.isArray(data)) {
+          await db.insert(lmZoneMappings).values(data.map((r: any) => ({ ...r, start_date: df(r.start_date), end_date: df(r.end_date) }))).onConflictDoNothing()
+          return NextResponse.json({ created: data.length })
+        } else {
+          const [row] = await db.insert(lmZoneMappings).values({ ...data, start_date: df(data.start_date), end_date: df(data.end_date) }).returning()
+          return NextResponse.json(row)
+        }
       case 'rate':
-        if (Array.isArray(data)) { await prisma.lmRateCard.createMany({ data: data.map((r: any) => ({ ...r, start_date: df(r.start_date), end_date: df(r.end_date), unit_value: Number(r.unit_value), rate: Number(r.rate) })), skipDuplicates: true }); return NextResponse.json({ created: data.length }) }
-        return NextResponse.json(await prisma.lmRateCard.create({ data: { ...data, start_date: df(data.start_date), end_date: df(data.end_date) } }))
+        if (Array.isArray(data)) {
+          await db.insert(lmRateCards).values(data.map((r: any) => ({ ...r, start_date: df(r.start_date), end_date: df(r.end_date), unit_value: Number(r.unit_value), rate: Number(r.rate) }))).onConflictDoNothing()
+          return NextResponse.json({ created: data.length })
+        } else {
+          const [row] = await db.insert(lmRateCards).values({ ...data, start_date: df(data.start_date), end_date: df(data.end_date) }).returning()
+          return NextResponse.json(row)
+        }
       case 'das':
-        if (Array.isArray(data)) { await prisma.lmDasMaster.createMany({ data: data.map((r: any) => ({ ...r, start_date: df(r.start_date), end_date: df(r.end_date), surcharge_amount: Number(r.surcharge_amount) })), skipDuplicates: true }); return NextResponse.json({ created: data.length }) }
-        return NextResponse.json(await prisma.lmDasMaster.create({ data: { ...data, start_date: df(data.start_date), end_date: df(data.end_date) } }))
-      case 'surcharge': return NextResponse.json(await prisma.lmSurchargeMaster.create({ data: { ...data, start_date: df(data.start_date), end_date: df(data.end_date) } }))
-      case 'avg': return NextResponse.json(await prisma.lmAvgMaster.create({ data: { ...data, start_date: df(data.start_date), end_date: df(data.end_date) } }))
-      default: return NextResponse.json({ error: 'Unknown type' }, { status: 400 })
+        if (Array.isArray(data)) {
+          await db.insert(lmDasMasters).values(data.map((r: any) => ({ ...r, start_date: df(r.start_date), end_date: df(r.end_date), surcharge_amount: Number(r.surcharge_amount) }))).onConflictDoNothing()
+          return NextResponse.json({ created: data.length })
+        } else {
+          const [row] = await db.insert(lmDasMasters).values({ ...data, start_date: df(data.start_date), end_date: df(data.end_date) }).returning()
+          return NextResponse.json(row)
+        }
+      case 'surcharge': {
+        const [row] = await db.insert(lmSurchargeMasters).values({ ...data, start_date: df(data.start_date), end_date: df(data.end_date) }).returning()
+        return NextResponse.json(row)
+      }
+      case 'avg': {
+        const [row] = await db.insert(lmAvgMasters).values({ ...data, start_date: df(data.start_date), end_date: df(data.end_date) }).returning()
+        return NextResponse.json(row)
+      }
+      default:
+        return NextResponse.json({ error: 'Unknown type' }, { status: 400 })
     }
   } catch (e) { return err(e) }
 }
@@ -254,18 +369,33 @@ export async function PUT_lm(req: NextRequest) {
     const { type, id, data } = await req.json()
     const df = (s: string) => new Date(s)
     switch (type) {
-      case 'config': return NextResponse.json(await prisma.lmCarrierConfig.update({ where: { id }, data: { ...data, start_date: df(data.start_date), end_date: df(data.end_date) } }))
-      case 'rate':   return NextResponse.json(await prisma.lmRateCard.update({ where: { id }, data: { ...data, start_date: df(data.start_date), end_date: df(data.end_date) } }))
-      case 'das':    return NextResponse.json(await prisma.lmDasMaster.update({ where: { id }, data: { ...data, start_date: df(data.start_date), end_date: df(data.end_date) } }))
-      default: return NextResponse.json({ error: 'Cannot update' }, { status: 400 })
+      case 'config': {
+        const [row] = await db.update(lmCarrierConfigs).set({ ...data, start_date: df(data.start_date), end_date: df(data.end_date) }).where(eq(lmCarrierConfigs.id, id)).returning()
+        return NextResponse.json(row)
+      }
+      case 'rate': {
+        const [row] = await db.update(lmRateCards).set({ ...data, start_date: df(data.start_date), end_date: df(data.end_date) }).where(eq(lmRateCards.id, id)).returning()
+        return NextResponse.json(row)
+      }
+      case 'das': {
+        const [row] = await db.update(lmDasMasters).set({ ...data, start_date: df(data.start_date), end_date: df(data.end_date) }).where(eq(lmDasMasters.id, id)).returning()
+        return NextResponse.json(row)
+      }
+      default:
+        return NextResponse.json({ error: 'Cannot update' }, { status: 400 })
     }
   } catch (e) { return err(e) }
 }
 export async function DELETE_lm(req: NextRequest) {
   const { type, id } = await req.json()
-  const modelMap: Record<string, string> = { config: 'lmCarrierConfig', zone: 'lmZoneMapping', rate: 'lmRateCard', das: 'lmDasMaster', surcharge: 'lmSurchargeMaster', avg: 'lmAvgMaster' }
-  const model = modelMap[type]
-  if (!model) return NextResponse.json({ error: 'Unknown type' }, { status: 400 })
-  await (prisma as any)[model].delete({ where: { id } })
+  switch (type) {
+    case 'config':    await db.delete(lmCarrierConfigs).where(eq(lmCarrierConfigs.id, id)); break
+    case 'zone':      await db.delete(lmZoneMappings).where(eq(lmZoneMappings.id, id)); break
+    case 'rate':      await db.delete(lmRateCards).where(eq(lmRateCards.id, id)); break
+    case 'das':       await db.delete(lmDasMasters).where(eq(lmDasMasters.id, id)); break
+    case 'surcharge': await db.delete(lmSurchargeMasters).where(eq(lmSurchargeMasters.id, id)); break
+    case 'avg':       await db.delete(lmAvgMasters).where(eq(lmAvgMasters.id, id)); break
+    default:          return NextResponse.json({ error: 'Unknown type' }, { status: 400 })
+  }
   return NextResponse.json({ success: true })
 }

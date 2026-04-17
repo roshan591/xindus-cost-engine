@@ -1,32 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { gte, lt } from 'drizzle-orm'
+import { db } from '@/db'
+import { shipments } from '@/db/schema'
 import * as XLSX from 'xlsx'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
-  const week = searchParams.get('week')
+  const week  = searchParams.get('week')
   const month = searchParams.get('month')
-  const where: Record<string, unknown> = {}
+
+  const filters: Parameters<typeof db.query.shipments.findMany>[0] = {}
 
   if (week) {
     const [yearStr, weekStr] = week.split('-W')
-    const jan1 = new Date(parseInt(yearStr), 0, 1)
+    const jan1  = new Date(parseInt(yearStr), 0, 1)
     const start = new Date(jan1); start.setDate(jan1.getDate() + (parseInt(weekStr) - 1) * 7)
-    const end = new Date(start); end.setDate(start.getDate() + 7)
-    where.pickup_date = { gte: start, lt: end }
+    const end   = new Date(start); end.setDate(start.getDate() + 7)
+    filters.where = (t, { and, gte, lt }) => and(gte(t.pickup_date, start), lt(t.pickup_date, end))
   } else if (month) {
     const [y, m] = month.split('-')
-    where.pickup_date = { gte: new Date(parseInt(y), parseInt(m) - 1, 1), lt: new Date(parseInt(y), parseInt(m), 1) }
+    const start  = new Date(parseInt(y), parseInt(m) - 1, 1)
+    const end    = new Date(parseInt(y), parseInt(m), 1)
+    filters.where = (t, { and, gte, lt }) => and(gte(t.pickup_date, start), lt(t.pickup_date, end))
   }
 
-  const shipments = await prisma.shipment.findMany({ where, include: { costs: true }, orderBy: { pickup_date: 'asc' } })
-  if (!shipments.length) return NextResponse.json({ error: 'No shipments found' }, { status: 404 })
+  const rows = await db.query.shipments.findMany({
+    ...filters,
+    with: { costs: true },
+    orderBy: (t, { asc }) => [asc(t.pickup_date)],
+  })
+  if (!rows.length) return NextResponse.json({ error: 'No shipments found' }, { status: 404 })
 
   const wb = XLSX.utils.book_new()
 
-  // Sheet 1: Full breakdown
-  const rows = shipments.map(s => ({
-    'AWB': s.awb, 'Pickup Date': s.pickup_date.toISOString().slice(0,10),
+  const sheetRows = rows.map(s => ({
+    'AWB': s.awb, 'Pickup Date': s.pickup_date.toISOString().slice(0, 10),
     'Service Node': s.service_node, 'Hub': s.hub_name,
     'Manifest': s.pc_to_hub ?? '', 'Flight No': s.pc_to_hub_flight_no ?? '',
     'MAWB': s.mawb ?? '', 'Port of Origin': s.port_of_origin ?? '',
@@ -37,79 +45,69 @@ export async function GET(req: NextRequest) {
     'Packages': s.n_packages, 'L cm': s.length_cm, 'W cm': s.width_cm, 'H cm': s.height_cm,
     'Gross Wt kg': s.gross_weight, 'LM Carrier': s.lm_carrier ?? '',
     'Shipping Method': s.lm_shipping_method ?? '', 'Dest ZIP': s.dest_zip ?? '',
-    'Pickup ₹': s.costs?.pickup_cost ?? 0, 'Pickup Src': s.costs?.pickup_source ?? '',
-    'First Mile ₹': s.costs?.fm_cost ?? 0, 'FM Src': s.costs?.fm_source ?? '',
-    'Hub ₹': s.costs?.hub_cost ?? 0, 'Hub Src': s.costs?.hub_source ?? '',
-    'Origin Customs ₹': s.costs?.oc_cost ?? 0, 'OC Src': s.costs?.oc_source ?? '',
-    'Middle Mile ₹': s.costs?.mm_cost ?? 0, 'MM Src': s.costs?.mm_source ?? '',
-    'Dest Handling ₹': s.costs?.dh_cost ?? 0, 'DH Src': s.costs?.dh_source ?? '',
+    'Pickup ₹': s.costs?.pickup_cost ?? 0,      'Pickup Src': s.costs?.pickup_source ?? '',
+    'First Mile ₹': s.costs?.fm_cost ?? 0,      'FM Src': s.costs?.fm_source ?? '',
+    'Hub ₹': s.costs?.hub_cost ?? 0,            'Hub Src': s.costs?.hub_source ?? '',
+    'Origin Customs ₹': s.costs?.oc_cost ?? 0,  'OC Src': s.costs?.oc_source ?? '',
+    'Middle Mile ₹': s.costs?.mm_cost ?? 0,     'MM Src': s.costs?.mm_source ?? '',
+    'Dest Handling ₹': s.costs?.dh_cost ?? 0,   'DH Src': s.costs?.dh_source ?? '',
     'Dest Clearance ₹': s.costs?.dc_clearance_cost ?? 0, 'DC Src': s.costs?.dc_clearance_source ?? '',
-    'Drop-Off ₹': s.costs?.dropoff_cost ?? 0, 'Dropoff Src': s.costs?.dropoff_source ?? '',
-    'Last Mile ₹': s.costs?.lm_cost ?? 0, 'LM Src': s.costs?.lm_source ?? '',
+    'Drop-Off ₹': s.costs?.dropoff_cost ?? 0,   'Dropoff Src': s.costs?.dropoff_source ?? '',
+    'Last Mile ₹': s.costs?.lm_cost ?? 0,       'LM Src': s.costs?.lm_source ?? '',
     'Total ₹': s.costs?.total_cost ?? 0,
     '₹/kg': s.costs && s.gross_weight ? +(s.costs.total_cost / s.gross_weight).toFixed(2) : 0,
-    'Computed At': s.costs?.computed_at.toISOString().slice(0,19) ?? '',
+    'Computed At': s.costs?.computed_at.toISOString().slice(0, 19) ?? '',
   }))
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheetRows), 'Cost Breakdown')
 
-  const ws1 = XLSX.utils.json_to_sheet(rows)
-  XLSX.utils.book_append_sheet(wb, ws1, 'Cost Breakdown')
-
-  // Sheet 2: Weekly summary
   const nodes = ['pickup', 'fm', 'hub', 'oc', 'mm', 'dh', 'dc_clearance', 'dropoff', 'lm'] as const
   type NodeKey = (typeof nodes)[number]
   type WS = { week: string; count: number; weight: number; total: number } & Record<NodeKey, number>
-  const wm = new Map<string, WS>()
 
-  const getNodeCost = (costs: NonNullable<(typeof shipments)[number]['costs']>, node: NodeKey) => {
+  const getNodeCost = (c: NonNullable<(typeof rows)[number]['costs']>, node: NodeKey): number => {
     switch (node) {
-      case 'pickup': return costs.pickup_cost
-      case 'fm': return costs.fm_cost
-      case 'hub': return costs.hub_cost
-      case 'oc': return costs.oc_cost
-      case 'mm': return costs.mm_cost
-      case 'dh': return costs.dh_cost
-      case 'dc_clearance': return costs.dc_clearance_cost
-      case 'dropoff': return costs.dropoff_cost
-      case 'lm': return costs.lm_cost
+      case 'pickup': return c.pickup_cost; case 'fm': return c.fm_cost
+      case 'hub': return c.hub_cost;       case 'oc': return c.oc_cost
+      case 'mm': return c.mm_cost;         case 'dh': return c.dh_cost
+      case 'dc_clearance': return c.dc_clearance_cost
+      case 'dropoff': return c.dropoff_cost; case 'lm': return c.lm_cost
     }
   }
-  for (const s of shipments) {
-    const d = s.pickup_date
-    const wk = Math.ceil(((d.getTime() - new Date(d.getFullYear(),0,1).getTime()) / 86400000 + 1) / 7)
-    const lbl = `${d.getFullYear()}-W${String(wk).padStart(2,'0')}`
+
+  const wm = new Map<string, WS>()
+  for (const s of rows) {
+    const d  = s.pickup_date
+    const wk = Math.ceil(((d.getTime() - new Date(d.getFullYear(), 0, 1).getTime()) / 86400000 + 1) / 7)
+    const lbl = `${d.getFullYear()}-W${String(wk).padStart(2, '0')}`
     if (!wm.has(lbl)) {
-      const nodeDefaults = Object.fromEntries(nodes.map((node) => [node, 0])) as Record<NodeKey, number>
-      wm.set(lbl, { week: lbl, count: 0, weight: 0, total: 0, ...nodeDefaults })
+      const nd = Object.fromEntries(nodes.map(n => [n, 0])) as Record<NodeKey, number>
+      wm.set(lbl, { week: lbl, count: 0, weight: 0, total: 0, ...nd })
     }
     const w = wm.get(lbl)!
     w.count++; w.weight += s.gross_weight
-    if (s.costs) {
-      const costs = s.costs
-      w.total += costs.total_cost
-      nodes.forEach((node) => { w[node] += getNodeCost(costs, node) })
-    }
+    if (s.costs) { const c = s.costs; w.total += c.total_cost; nodes.forEach(n => { w[n] += getNodeCost(c, n) }) }
   }
-  const wrows = Array.from(wm.values()).sort((a,b)=>a.week.localeCompare(b.week)).map(w => ({
+
+  const wrows = Array.from(wm.values()).sort((a, b) => a.week.localeCompare(b.week)).map(w => ({
     'Week': w.week, 'Shipments': w.count, 'Weight kg': +w.weight.toFixed(2),
     'Pickup ₹': +w.pickup.toFixed(2), 'First Mile ₹': +w.fm.toFixed(2),
     'Hub ₹': +w.hub.toFixed(2), 'Origin Customs ₹': +w.oc.toFixed(2),
     'Middle Mile ₹': +w.mm.toFixed(2), 'Dest Handling ₹': +w.dh.toFixed(2),
     'Dest Clearance ₹': +w.dc_clearance.toFixed(2), 'Drop-Off ₹': +w.dropoff.toFixed(2),
     'Last Mile ₹': +w.lm.toFixed(2), 'Total ₹': +w.total.toFixed(2),
-    '₹/kg': w.weight ? +(w.total/w.weight).toFixed(2) : 0,
+    '₹/kg': w.weight ? +(w.total / w.weight).toFixed(2) : 0,
   }))
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(wrows), 'Weekly Summary')
 
-  // Sheet 3: Node distribution
+  const grand = rows.reduce((a, s) => a + (s.costs?.total_cost ?? 0), 0)
   const nodeLabels: [NodeKey, string][] = [
-    ['pickup','Pickup'],['fm','First Mile'],['hub','Hub'],['oc','Origin Customs'],
-    ['mm','Middle Mile'],['dh','Dest. Handling'],['dc_clearance','Dest. Clearance'],
-    ['dropoff','Drop-Off'],['lm','Last Mile'],
+    ['pickup', 'Pickup'], ['fm', 'First Mile'], ['hub', 'Hub'], ['oc', 'Origin Customs'],
+    ['mm', 'Middle Mile'], ['dh', 'Dest. Handling'], ['dc_clearance', 'Dest. Clearance'],
+    ['dropoff', 'Drop-Off'], ['lm', 'Last Mile'],
   ]
-  const grand = shipments.reduce((a,s)=>a+(s.costs?.total_cost??0),0)
-  const drows = nodeLabels.map(([k,l])=>{
-    const c = shipments.reduce((a, s) => a + (s.costs ? getNodeCost(s.costs, k) : 0), 0)
-    return { 'Node': l, 'Total ₹': +c.toFixed(2), '% of Total': grand ? +(c/grand*100).toFixed(1) : 0 }
+  const drows = nodeLabels.map(([k, l]) => {
+    const c = rows.reduce((a, s) => a + (s.costs ? getNodeCost(s.costs, k) : 0), 0)
+    return { 'Node': l, 'Total ₹': +c.toFixed(2), '% of Total': grand ? +(c / grand * 100).toFixed(1) : 0 }
   })
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(drows), 'Node Distribution')
 

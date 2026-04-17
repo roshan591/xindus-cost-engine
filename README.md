@@ -70,6 +70,8 @@ cd xindus-cost-engine
 npm install
 ```
 
+Use Node 20 LTS or Node 22 LTS for this repo. Node 24 can generate broken Next.js `.next` chunk output on Windows in this project.
+
 ### 2. Set up Supabase
 
 1. Create a project at [supabase.com](https://supabase.com)

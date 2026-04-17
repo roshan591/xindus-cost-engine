@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { eq } from 'drizzle-orm'
+import { db } from '@/db'
+import { shipments } from '@/db/schema'
 
 export async function GET(_req: NextRequest, { params }: { params: { awb: string } }) {
-  const shipment = await prisma.shipment.findUnique({
-    where: { awb: params.awb },
-    include: { costs: true, overrides: { orderBy: { updated_at: 'desc' } } },
+  const shipment = await db.query.shipments.findFirst({
+    where: (t, { eq }) => eq(t.awb, params.awb),
+    with: { costs: true, overrides: { orderBy: (t, { desc }) => [desc(t.updated_at)] } },
   })
   if (!shipment) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
   const c = shipment.costs
   const nodeCosts = c ? {
     pickup:       { cost: c.pickup_cost,       source: c.pickup_source       },
@@ -22,10 +25,11 @@ export async function GET(_req: NextRequest, { params }: { params: { awb: string
     cost_per_kg:  shipment.gross_weight ? c.total_cost / shipment.gross_weight : 0,
     computed_at:  c.computed_at,
   } : null
+
   return NextResponse.json({ shipment, nodeCosts })
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { awb: string } }) {
-  await prisma.shipment.delete({ where: { awb: params.awb } })
+  await db.delete(shipments).where(eq(shipments.awb, params.awb))
   return NextResponse.json({ deleted: true, awb: params.awb })
 }
