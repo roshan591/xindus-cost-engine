@@ -2,9 +2,6 @@
   "name": "xindus-cost-engine",
   "version": "1.0.0",
   "private": true,
-  "engines": {
-    "node": ">=20.9 <24"
-  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
