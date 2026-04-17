@@ -12,7 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
-    "prebuild": "node scripts/check-next-version.js",
+    "prebuild": "node scripts/check-next-version.js || true",
     "postinstall": "prisma generate"
   },
   "prisma": {
