@@ -15,7 +15,13 @@ import {
 } from '@/db/schema'
 
 const d = (s: string) => new Date(s)
-function err(e: unknown) { return NextResponse.json({ error: String(e) }, { status: 500 }) }
+function err(e: unknown) {
+  const detail = e instanceof Error
+    ? { message: e.message, code: (e as any).code, detail: (e as any).detail }
+    : String(e)
+  console.error('[master-api-error]', JSON.stringify(detail))
+  return NextResponse.json({ error: detail }, { status: 500 })
+}
 
 // ── 5.1 PICKUP ────────────────────────────────────────────────────────────────
 export async function GET_pickup() {
