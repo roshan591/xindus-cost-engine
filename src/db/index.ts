@@ -5,16 +5,19 @@ import * as schema from './schema'
 const globalForDb = globalThis as unknown as { _db?: ReturnType<typeof makeDb> }
 
 function makeDb() {
-  // pg v8 treats sslmode=require as verify-full; strip it and use explicit ssl option
-  const connectionString = process.env.DATABASE_URL!
-    .replace(/[?&]sslmode=[^&]*/g, '')
-    .replace(/\?$/, '')
+  // Parse URL manually: strip sslmode, force IPv4 (Render can't reach Supabase over IPv6)
+  const u = new URL(process.env.DATABASE_URL!)
   const pool = new Pool({
-    connectionString,
+    host: u.hostname,
+    port: Number(u.port) || 5432,
+    database: u.pathname.slice(1),
+    user: decodeURIComponent(u.username),
+    password: decodeURIComponent(u.password),
     ssl: { rejectUnauthorized: false },
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
+    family: 4, // force IPv4
   })
   return drizzle(pool, { schema })
 }
