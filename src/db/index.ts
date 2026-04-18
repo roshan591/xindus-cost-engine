@@ -1,6 +1,10 @@
+import { setDefaultResultOrder } from 'dns'
 import { Pool } from 'pg'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import * as schema from './schema'
+
+// Render can't reach Supabase over IPv6 — force IPv4 DNS resolution
+setDefaultResultOrder('ipv4first')
 
 const globalForDb = globalThis as unknown as { _db?: ReturnType<typeof makeDb> }
 
@@ -17,7 +21,6 @@ function makeDb() {
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
-    family: 4, // force IPv4
   })
   return drizzle(pool, { schema })
 }
