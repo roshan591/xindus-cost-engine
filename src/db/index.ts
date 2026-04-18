@@ -5,9 +5,14 @@ import * as schema from './schema'
 const globalForDb = globalThis as unknown as { _db?: ReturnType<typeof makeDb> }
 
 function makeDb() {
-  // Strip sslmode from URL to avoid conflict with explicit ssl option
-  const url = process.env.DATABASE_URL!.replace(/[?&]sslmode=[^&]*/g, '').replace(/[?&]$/, '')
-  const client = postgres(url, {
+  // Parse URL manually to handle %40-encoded passwords correctly
+  const u = new URL(process.env.DATABASE_URL!)
+  const client = postgres({
+    host: u.hostname,
+    port: Number(u.port) || 5432,
+    database: u.pathname.slice(1),
+    username: decodeURIComponent(u.username),
+    password: decodeURIComponent(u.password),
     max: 10,
     idle_timeout: 20,
     connect_timeout: 10,
