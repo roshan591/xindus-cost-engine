@@ -1,24 +1,18 @@
-import postgres from 'postgres'
-import { drizzle } from 'drizzle-orm/postgres-js'
+import { Pool } from 'pg'
+import { drizzle } from 'drizzle-orm/node-postgres'
 import * as schema from './schema'
 
 const globalForDb = globalThis as unknown as { _db?: ReturnType<typeof makeDb> }
 
 function makeDb() {
-  // Parse URL manually to handle %40-encoded passwords correctly
-  const u = new URL(process.env.DATABASE_URL!)
-  const client = postgres({
-    host: u.hostname,
-    port: Number(u.port) || 5432,
-    database: u.pathname.slice(1),
-    username: decodeURIComponent(u.username),
-    password: decodeURIComponent(u.password),
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
     max: 10,
-    idle_timeout: 20,
-    connect_timeout: 10,
-    ssl: 'require',
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
   })
-  return drizzle(client, { schema })
+  return drizzle(pool, { schema })
 }
 
 export const db = globalForDb._db ?? makeDb()
