@@ -16,8 +16,9 @@ import {
 
 const d = (s: string) => new Date(s)
 function err(e: unknown) {
+  const cause = (e as any)?.cause
   const detail = e instanceof Error
-    ? { name: e.constructor.name, message: e.message, code: (e as any).code, detail: (e as any).detail, stack: e.stack?.slice(0, 300) }
+    ? { name: e.constructor.name, message: e.message, cause: cause instanceof Error ? { name: cause.constructor.name, message: cause.message, code: (cause as any).code } : String(cause) }
     : String(e)
   console.error('[master-api-error]', JSON.stringify(detail))
   return NextResponse.json({ error: detail }, { status: 500 })
