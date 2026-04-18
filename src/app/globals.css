@@ -1,23 +1,23 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:        #070d1a;
-  --bg-card:   #0d1626;
-  --bg-hover:  #111e30;
-  --border:    #1a2d44;
-  --border-hi: #254060;
-  --text:      #e8f0f8;
-  --text-soft: #7a9ab8;
-  --text-muted:#3d5a74;
-  --amber:     #f59e0b;
-  --amber-dim: #f59e0b22;
-  --cyan:      #22d3ee;
-  --purple:    #a78bfa;
-  --green:     #34d399;
-  --red:       #f87171;
-  --blue:      #60a5fa;
-  --orange:    #fb923c;
-  --pink:      #f472b6;
+  --bg:        #ffffff;
+  --bg-card:   #f8fafc;
+  --bg-hover:  #f1f5f9;
+  --border:    #e2e8f0;
+  --border-hi: #cbd5e1;
+  --text:      #0f172a;
+  --text-soft: #475569;
+  --text-muted:#94a3b8;
+  --amber:     #d97706;
+  --amber-dim: #d9770615;
+  --cyan:      #0891b2;
+  --purple:    #7c3aed;
+  --green:     #059669;
+  --red:       #dc2626;
+  --blue:      #2563eb;
+  --orange:    #ea580c;
+  --pink:      #db2777;
   --radius:    6px;
   --radius-lg: 10px;
 }
@@ -106,13 +106,13 @@ thead th {
   text-align: left; padding: 7px 10px;
   font-size: 10px; text-transform: uppercase; letter-spacing: .07em;
   color: var(--text-muted); border-bottom: 1px solid var(--border);
-  background: #080f1c; white-space: nowrap; font-weight: 600;
+  background: #f1f5f9; white-space: nowrap; font-weight: 600;
 }
 thead th.r { text-align: right; }
 tbody tr { cursor: pointer; }
 tbody tr:hover td { background: var(--bg-hover); }
 tbody td {
-  padding: 7px 10px; border-bottom: 1px solid #0c1624;
+  padding: 7px 10px; border-bottom: 1px solid var(--border);
   color: var(--text-soft); font-size: 12px;
 }
 tbody td.h { color: var(--text); font-weight: 500; }
@@ -121,7 +121,7 @@ tbody td.ra { text-align: right; font-family: 'SF Mono', 'Fira Code', monospace;
 tbody td.expand { width: 28px; text-align: center; color: var(--text-muted); font-size: 10px; }
 
 /* ── Expanded row ───────────────────────────────────────────── */
-.expand-panel { background: #0a1220; border-bottom: 1px solid var(--border); }
+.expand-panel { background: var(--bg-hover); border-bottom: 1px solid var(--border); }
 .expand-panel td { padding: 14px 18px; }
 .node-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
 .node-chip { border-radius: 5px; padding: 5px 9px; border: 1px solid; }
@@ -147,7 +147,7 @@ tbody td.expand { width: 28px; text-align: center; color: var(--text-muted); fon
 
 /* ── Buttons ─────────────────────────────────────────────────── */
 .btn-primary {
-  background: var(--amber); color: #000; border: none;
+  background: var(--amber); color: #fff; border: none;
   border-radius: 5px; padding: 7px 16px; font-size: 12px;
   font-weight: 600; cursor: pointer; white-space: nowrap;
   transition: opacity .15s;
@@ -169,7 +169,7 @@ tbody td.expand { width: 28px; text-align: center; color: var(--text-muted); fon
 
 /* ── Inputs ──────────────────────────────────────────────────── */
 input, select, textarea {
-  background: #060c18; border: 1px solid var(--border);
+  background: #ffffff; border: 1px solid var(--border);
   border-radius: var(--radius); color: var(--text);
   font-size: 12px; padding: 7px 10px; width: 100%;
   transition: border-color .15s; outline: none;
@@ -218,7 +218,7 @@ label.field-label {
   border-radius: var(--radius-lg); padding: 12px 18px;
   display: flex; align-items: center; gap: 10px;
   font-size: 12px; color: var(--text);
-  box-shadow: 0 4px 24px rgba(0,0,0,.4);
+  box-shadow: 0 4px 24px rgba(0,0,0,.12);
   animation: slideIn .2s ease;
 }
 .toast.success { border-color: #34d39940; }
