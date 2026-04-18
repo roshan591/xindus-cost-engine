@@ -5,7 +5,8 @@ import * as schema from './schema'
 const globalForDb = globalThis as unknown as { _db?: ReturnType<typeof makeDb> }
 
 function makeDb() {
-  const client = postgres(process.env.DATABASE_URL!, { max: 1, ssl: 'require' })
+  // ssl handled via ?sslmode=require in DATABASE_URL; don't double-set it
+  const client = postgres(process.env.DATABASE_URL!, { max: 1 })
   return drizzle(client, { schema })
 }
 

@@ -19,11 +19,13 @@ function err(e: unknown) { return NextResponse.json({ error: String(e) }, { stat
 
 // ── 5.1 PICKUP ────────────────────────────────────────────────────────────────
 export async function GET_pickup() {
-  const [masters, avg] = await Promise.all([
-    db.select().from(pickupCostMasters).orderBy(asc(pickupCostMasters.pickup_node), desc(pickupCostMasters.start_date)),
-    db.select().from(pickupAvgMasters).orderBy(desc(pickupAvgMasters.start_date)),
-  ])
-  return NextResponse.json({ masters, avg })
+  try {
+    const [masters, avg] = await Promise.all([
+      db.select().from(pickupCostMasters).orderBy(asc(pickupCostMasters.pickup_node), desc(pickupCostMasters.start_date)),
+      db.select().from(pickupAvgMasters).orderBy(desc(pickupAvgMasters.start_date)),
+    ])
+    return NextResponse.json({ masters, avg })
+  } catch (e) { return err(e) }
 }
 export async function POST_pickup(req: NextRequest) {
   try {
@@ -55,11 +57,13 @@ export async function DELETE_pickup(req: NextRequest) {
 
 // ── 5.2 FIRST MILE ───────────────────────────────────────────────────────────
 export async function GET_fm() {
-  const [masters, avg] = await Promise.all([
-    db.select().from(fmMasters).orderBy(asc(fmMasters.origin_node), desc(fmMasters.start_date)),
-    db.select().from(fmAvgMasters).orderBy(desc(fmAvgMasters.start_date)),
-  ])
-  return NextResponse.json({ masters, avg })
+  try {
+    const [masters, avg] = await Promise.all([
+      db.select().from(fmMasters).orderBy(asc(fmMasters.origin_node), desc(fmMasters.start_date)),
+      db.select().from(fmAvgMasters).orderBy(desc(fmAvgMasters.start_date)),
+    ])
+    return NextResponse.json({ masters, avg })
+  } catch (e) { return err(e) }
 }
 export async function POST_fm(req: NextRequest) {
   try {
@@ -91,11 +95,13 @@ export async function DELETE_fm(req: NextRequest) {
 
 // ── 5.3 HUB ──────────────────────────────────────────────────────────────────
 export async function GET_hub() {
-  const [masters, holidayRows] = await Promise.all([
-    db.select().from(hubCostMasters).orderBy(asc(hubCostMasters.hub_name), desc(hubCostMasters.start_date)),
-    db.select().from(holidays).orderBy(desc(holidays.date)),
-  ])
-  return NextResponse.json({ masters, holidays: holidayRows })
+  try {
+    const [masters, holidayRows] = await Promise.all([
+      db.select().from(hubCostMasters).orderBy(asc(hubCostMasters.hub_name), desc(hubCostMasters.start_date)),
+      db.select().from(holidays).orderBy(desc(holidays.date)),
+    ])
+    return NextResponse.json({ masters, holidays: holidayRows })
+  } catch (e) { return err(e) }
 }
 export async function POST_hub(req: NextRequest) {
   try {
@@ -128,11 +134,13 @@ export async function DELETE_hub(req: NextRequest) {
 
 // ── 5.4 OC ───────────────────────────────────────────────────────────────────
 export async function GET_oc() {
-  const [masters, avg] = await Promise.all([
-    db.select().from(ocMasters).orderBy(asc(ocMasters.vendor_name), asc(ocMasters.charge_type)),
-    db.select().from(ocAvgMasters),
-  ])
-  return NextResponse.json({ masters, avg })
+  try {
+    const [masters, avg] = await Promise.all([
+      db.select().from(ocMasters).orderBy(asc(ocMasters.vendor_name), asc(ocMasters.charge_type)),
+      db.select().from(ocAvgMasters),
+    ])
+    return NextResponse.json({ masters, avg })
+  } catch (e) { return err(e) }
 }
 export async function POST_oc(req: NextRequest) {
   try {
@@ -164,11 +172,13 @@ export async function DELETE_oc(req: NextRequest) {
 
 // ── 5.5 MM ───────────────────────────────────────────────────────────────────
 export async function GET_mm() {
-  const [masters, avg] = await Promise.all([
-    db.select().from(mmMasters).orderBy(asc(mmMasters.origin_port), desc(mmMasters.start_date)),
-    db.select().from(mmAvgMasters).orderBy(desc(mmAvgMasters.start_date)),
-  ])
-  return NextResponse.json({ masters, avg })
+  try {
+    const [masters, avg] = await Promise.all([
+      db.select().from(mmMasters).orderBy(asc(mmMasters.origin_port), desc(mmMasters.start_date)),
+      db.select().from(mmAvgMasters).orderBy(desc(mmAvgMasters.start_date)),
+    ])
+    return NextResponse.json({ masters, avg })
+  } catch (e) { return err(e) }
 }
 export async function POST_mm(req: NextRequest) {
   try {
@@ -200,11 +210,13 @@ export async function DELETE_mm(req: NextRequest) {
 
 // ── 5.6 DH ───────────────────────────────────────────────────────────────────
 export async function GET_dh() {
-  const [masters, avg] = await Promise.all([
-    db.select().from(dhMasters).orderBy(asc(dhMasters.dc_partner), asc(dhMasters.cost_head_name)),
-    db.select().from(dhAvgMasters),
-  ])
-  return NextResponse.json({ masters, avg })
+  try {
+    const [masters, avg] = await Promise.all([
+      db.select().from(dhMasters).orderBy(asc(dhMasters.dc_partner), asc(dhMasters.cost_head_name)),
+      db.select().from(dhAvgMasters),
+    ])
+    return NextResponse.json({ masters, avg })
+  } catch (e) { return err(e) }
 }
 export async function POST_dh(req: NextRequest) {
   try {
@@ -236,11 +248,13 @@ export async function DELETE_dh(req: NextRequest) {
 
 // ── 5.7 DC ───────────────────────────────────────────────────────────────────
 export async function GET_dc() {
-  const [masters, avg] = await Promise.all([
-    db.select().from(dcClearanceMasters).orderBy(asc(dcClearanceMasters.country), asc(dcClearanceMasters.charge_type)),
-    db.select().from(dcClearanceAvgMasters),
-  ])
-  return NextResponse.json({ masters, avg })
+  try {
+    const [masters, avg] = await Promise.all([
+      db.select().from(dcClearanceMasters).orderBy(asc(dcClearanceMasters.country), asc(dcClearanceMasters.charge_type)),
+      db.select().from(dcClearanceAvgMasters),
+    ])
+    return NextResponse.json({ masters, avg })
+  } catch (e) { return err(e) }
 }
 export async function POST_dc(req: NextRequest) {
   try {
@@ -272,11 +286,13 @@ export async function DELETE_dc(req: NextRequest) {
 
 // ── 5.8 DROPOFF ──────────────────────────────────────────────────────────────
 export async function GET_dropoff() {
-  const [masters, avg] = await Promise.all([
-    db.select().from(dropoffMasters).orderBy(asc(dropoffMasters.country), asc(dropoffMasters.partner)),
-    db.select().from(dropoffAvgMasters),
-  ])
-  return NextResponse.json({ masters, avg })
+  try {
+    const [masters, avg] = await Promise.all([
+      db.select().from(dropoffMasters).orderBy(asc(dropoffMasters.country), asc(dropoffMasters.partner)),
+      db.select().from(dropoffAvgMasters),
+    ])
+    return NextResponse.json({ masters, avg })
+  } catch (e) { return err(e) }
 }
 export async function POST_dropoff(req: NextRequest) {
   try {
@@ -308,15 +324,17 @@ export async function DELETE_dropoff(req: NextRequest) {
 
 // ── 5.9 LM ───────────────────────────────────────────────────────────────────
 export async function GET_lm() {
-  const [configs, zones, rates, das, surcharges, avg] = await Promise.all([
-    db.select().from(lmCarrierConfigs).orderBy(asc(lmCarrierConfigs.carrier_name)),
-    db.select().from(lmZoneMappings).orderBy(asc(lmZoneMappings.carrier_name), asc(lmZoneMappings.destination_key)),
-    db.select().from(lmRateCards).orderBy(asc(lmRateCards.carrier_name), asc(lmRateCards.zone), asc(lmRateCards.unit_value)),
-    db.select().from(lmDasMasters).orderBy(asc(lmDasMasters.carrier_name), asc(lmDasMasters.zipcode)),
-    db.select().from(lmSurchargeMasters).orderBy(asc(lmSurchargeMasters.carrier_name)),
-    db.select().from(lmAvgMasters),
-  ])
-  return NextResponse.json({ configs, zones, rates, das, surcharges, avg })
+  try {
+    const [configs, zones, rates, das, surcharges, avg] = await Promise.all([
+      db.select().from(lmCarrierConfigs).orderBy(asc(lmCarrierConfigs.carrier_name)),
+      db.select().from(lmZoneMappings).orderBy(asc(lmZoneMappings.carrier_name), asc(lmZoneMappings.destination_key)),
+      db.select().from(lmRateCards).orderBy(asc(lmRateCards.carrier_name), asc(lmRateCards.zone), asc(lmRateCards.unit_value)),
+      db.select().from(lmDasMasters).orderBy(asc(lmDasMasters.carrier_name), asc(lmDasMasters.zipcode)),
+      db.select().from(lmSurchargeMasters).orderBy(asc(lmSurchargeMasters.carrier_name)),
+      db.select().from(lmAvgMasters),
+    ])
+    return NextResponse.json({ configs, zones, rates, das, surcharges, avg })
+  } catch (e) { return err(e) }
 }
 export async function POST_lm(req: NextRequest) {
   try {
