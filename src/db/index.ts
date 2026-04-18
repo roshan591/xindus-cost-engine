@@ -8,6 +8,7 @@ function makeDb() {
   const client = postgres(process.env.DATABASE_URL!, {
     max: 1,
     ssl: { rejectUnauthorized: false },
+    prepare: false, // required for Supabase transaction-mode pooler
   })
   return drizzle(client, { schema })
 }
