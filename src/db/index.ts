@@ -5,10 +5,13 @@ import * as schema from './schema'
 const globalForDb = globalThis as unknown as { _db?: ReturnType<typeof makeDb> }
 
 function makeDb() {
-  const client = postgres(process.env.DATABASE_URL!, {
-    max: 1,
-    ssl: { rejectUnauthorized: false },
-    prepare: false, // required for Supabase transaction-mode pooler
+  // Strip sslmode from URL to avoid conflict with explicit ssl option
+  const url = process.env.DATABASE_URL!.replace(/[?&]sslmode=[^&]*/g, '').replace(/[?&]$/, '')
+  const client = postgres(url, {
+    max: 10,
+    idle_timeout: 20,
+    connect_timeout: 10,
+    ssl: 'require',
   })
   return drizzle(client, { schema })
 }
